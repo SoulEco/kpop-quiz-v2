@@ -6,7 +6,7 @@ export async function onRequestPost(context) {
     const body = await request.json();
     const { password, code } = body; // code 是可选的
 
-    if (password !== 'soul2026') {
+    if (password !== '#%Dgs4w') {
       return new Response(JSON.stringify({ error: '密码错误' }), { 
         status: 401, headers: { 'Content-Type': 'application/json' } 
       });
