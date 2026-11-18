@@ -2,11 +2,11 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>管理员 - 授权码生成器</title>
+  <title>管理员 - 授权码管理</title>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; font-family: -apple-system, sans-serif; background: #0a0a0a; color: #fff; padding: 24px; }
-    .wrap { max-width: 700px; margin: 0 auto; }
+    .wrap { max-width: 800px; margin: 0 auto; }
     h2 { margin-top: 0; color: #ff3366; }
     .card { background: #151515; border: 1px solid #222; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
     label { display: block; font-size: 13px; color: #888; margin-bottom: 6px; margin-top: 14px; }
@@ -15,13 +15,16 @@
     input:focus, select:focus { border-color: #ff3366; }
     button { background: linear-gradient(135deg, #ff3366, #ff6b9d); border: none; font-weight: bold; cursor: pointer; margin-top: 20px; transition: 0.2s; }
     button:active { transform: scale(0.98); }
-    .result-area { display: none; }
-    .result-area h3 { color: #ff6b9d; margin-bottom: 12px; }
-    .copy-btn { background: #333; width: auto; padding: 8px 16px; font-size: 13px; margin: 10px 0; }
-    table { width: 100%; border-collapse: collapse; background: #1a1a1a; border-radius: 8px; overflow: hidden; margin-top: 12px; }
-    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #222; font-size: 14px; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: #333; margin-top: 10px; }
+    
+    table { width: 100%; border-collapse: collapse; background: #1a1a1a; border-radius: 8px; overflow: hidden; margin-top: 12px; font-size: 14px; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #222; }
     th { background: #222; color: #ff6b9d; font-weight: 600; }
-    .code-cell { font-family: monospace; font-size: 16px; letter-spacing: 2px; color: #fff; }
+    .code-cell { font-family: monospace; font-size: 15px; letter-spacing: 1px; color: #fff; }
+    
+    .status-used { color: #ff4444; }
+    .status-active { color: #00ff88; }
     .tip { font-size: 12px; color: #666; margin-top: 16px; line-height: 1.6; }
   </style>
 </head>
@@ -29,94 +32,134 @@
 <div class="wrap">
   <h2>🔐 授权码管理中心</h2>
 
+  <!-- 生成区域 -->
   <div class="card">
+    <h3 style="margin-top:0; color:#fff;">1. 生成新授权码</h3>
     <label>管理员密码</label>
-    <input type="password" id="pass" value="soul2026">
+    <!-- 修改点：去掉了 value，不再自动填入 -->
+    <input type="password" id="pass" placeholder="请输入管理员密码">
 
     <label>生成数量（1-100）</label>
     <input type="number" id="count" value="10" min="1" max="100">
 
-    <label>每个授权码的测试次数（商业设置）</label>
+    <label>每个授权码的测试次数</label>
     <select id="attempts">
-      <option value="1">1 次（一次性，最常用）</option>
+      <option value="1">1 次（一次性）</option>
       <option value="2">2 次</option>
       <option value="3">3 次</option>
       <option value="5">5 次</option>
     </select>
 
-    <button onclick="generate()">生成授权码</button>
+    <button onclick="generate()" id="genBtn">生成授权码</button>
+
+    <div id="genResult" style="display:none; margin-top:20px;">
+      <h4 style="color:#00ff88;">✅ 生成成功，请复制下表保存到 Excel</h4>
+      <button class="btn-secondary" style="width:auto; padding:8px 16px; font-size:13px;" onclick="copyTable('genTableBody')">📋 复制表格</button>
+      <table>
+        <thead><tr><th>授权码</th><th>测试次数</th><th>生成时间</th></tr></thead>
+        <tbody id="genTableBody"></tbody>
+      </table>
+    </div>
   </div>
 
-  <div class="card result-area" id="resultArea">
-    <h3>✅ 生成成功</h3>
-    <button class="copy-btn" onclick="copyTable()">📋 复制表格（粘贴到 Excel）</button>
-    <table id="codeTable">
-      <thead>
-        <tr><th>授权码</th><th>测试次数</th><th>生成时间</th></tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
-    <div class="tip">
-      💡 <strong>使用说明：</strong><br>
-      1. 点击"复制表格"按钮，粘贴到 Excel 保存，这就是你的本地记录<br>
-      2. 把授权码发给用户，用户访问主页输入码即可测试<br>
-      3. 用户测试完成后，码自动标记为已使用（次数减 1）<br>
-      4. 次数用完后，用户只能查看最后一次的结果海报<br>
-      5. 随时可以回来再次生成新的授权码批次
+  <!-- 查询区域 -->
+  <div class="card">
+    <h3 style="margin-top:0; color:#fff;">2. 查看/管理已生成记录</h3>
+    <p style="color:#888; font-size:13px; margin-bottom:15px;">点击下方按钮，读取数据库中所有授权码的使用状态。</p>
+    <button class="btn-secondary" onclick="loadStatus()" id="loadBtn" style="background:#444;">🔄 刷新授权码状态列表</button>
+    
+    <div id="listResult" style="display:none; margin-top:20px;">
+      <button class="btn-secondary" style="width:auto; padding:8px 16px; font-size:13px;" onclick="copyTable('listTableBody')">📋 复制状态表</button>
+      <table>
+        <thead><tr><th>授权码</th><th>总次数</th><th>已用/剩余</th><th>状态</th><th>生成时间</th></tr></thead>
+        <tbody id="listTableBody"></tbody>
+      </table>
     </div>
+  </div>
+
+  <div class="tip">
+    💡 <strong>说明：</strong><br>
+    1. 绿色状态表示该码还可以使用；红色表示次数已用完。<br>
+    2. 用户测试完成后，结果会自动覆盖保存，你可以随时在这里查看（未来版本可展示具体结果）。
   </div>
 </div>
 
 <script>
+// 生成授权码
 async function generate() {
   const pass = document.getElementById('pass').value;
-  const count = parseInt(document.getElementById('count').value);
-  const attempts = parseInt(document.getElementById('attempts').value);
+  const count = document.getElementById('count').value;
+  const attempts = document.getElementById('attempts').value;
 
   if (!pass) return alert('请输入密码');
-  if (count < 1 || count > 100) return alert('数量必须 1-100');
 
-  const btn = document.querySelector('button');
-  btn.disabled = true;
-  btn.innerText = '生成中...';
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true; btn.innerText = '生成中...';
 
   try {
     const res = await fetch('/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: pass, count, attempts })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pass, count: parseInt(count), attempts: parseInt(attempts) })
     });
     const data = await res.json();
-
     if (data.success) {
-      const tbody = document.getElementById('tableBody');
+      const tbody = document.getElementById('genTableBody');
       tbody.innerHTML = '';
       const now = new Date().toLocaleString('zh-CN');
       data.codes.forEach(item => {
         tbody.innerHTML += `<tr><td class="code-cell">${item.code}</td><td>${item.max} 次</td><td>${now}</td></tr>`;
       });
-      document.getElementById('resultArea').style.display = 'block';
+      document.getElementById('genResult').style.display = 'block';
     } else {
       alert('错误：' + data.error);
     }
-  } catch (e) {
-    alert('网络错误');
-  } finally {
-    btn.disabled = false;
-    btn.innerText = '生成授权码';
-  }
+  } catch (e) { alert('网络错误'); }
+  finally { btn.disabled = false; btn.innerText = '生成授权码'; }
 }
 
-function copyTable() {
-  let text = '授权码\t测试次数\t生成时间\n';
-  document.querySelectorAll('#tableBody tr').forEach(tr => {
+// 查询状态
+async function loadStatus() {
+  const pass = document.getElementById('pass').value;
+  if (!pass) return alert('请先在上方输入管理员密码');
+
+  const btn = document.getElementById('loadBtn');
+  btn.disabled = true; btn.innerText = '读取中...';
+
+  try {
+    const res = await fetch('/api/list', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pass })
+    });
+    const data = await res.json();
+    if (data.success) {
+      const tbody = document.getElementById('listTableBody');
+      tbody.innerHTML = '';
+      data.list.forEach(item => {
+        const statusClass = item.remaining > 0 ? 'status-active' : 'status-used';
+        const statusText = item.remaining > 0 ? `可用 (剩${item.remaining})` : '已用完';
+        tbody.innerHTML += `
+          <tr>
+            <td class="code-cell">${item.code}</td>
+            <td>${item.max}</td>
+            <td>${item.used} / ${item.remaining}</td>
+            <td class="${statusClass}"><strong>${statusText}</strong></td>
+            <td style="color:#888; font-size:12px;">${item.created}</td>
+          </tr>`;
+      });
+      document.getElementById('listResult').style.display = 'block';
+    } else {
+      alert('错误：' + data.error);
+    }
+  } catch (e) { alert('网络错误，请检查 KV 绑定'); }
+  finally { btn.disabled = false; btn.innerText = '🔄 刷新授权码状态列表'; }
+}
+
+function copyTable(tbodyId) {
+  let text = '';
+  document.querySelectorAll(`#${tbodyId} tr`).forEach(tr => {
     text += tr.innerText.replace(/\n/g, '\t') + '\n';
   });
-  navigator.clipboard.writeText(text).then(() => {
-    alert('✅ 已复制到剪贴板！\n请打开 Excel，按 Ctrl+V 粘贴保存。');
-  }).catch(() => {
-    alert('复制失败，请手动选择表格内容复制');
-  });
+  navigator.clipboard.writeText(text).then(() => alert('✅ 已复制，请粘贴到 Excel'));
 }
 </script>
 </body>
