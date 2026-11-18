@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>K-pop 性格原型测试</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, 'PingFang SC', sans-serif; background: #0a0a0a; color: #fff; min-height: 100vh; }
+    .wrap { max-width: 480px; margin: 0 auto; padding: 24px; }
+    .hidden { display: none !important; }
+
+    /* 输入页 */
+    .hero { text-align: center; padding: 60px 0 40px; }
+    .hero h1 { font-size: 28px; margin: 0 0 12px; background: linear-gradient(135deg, #ff3366, #ff6b9d); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero p { color: #888; font-size: 14px; line-height: 1.6; margin: 0 0 30px; }
+    .code-input { width: 100%; padding: 18px; font-size: 26px; letter-spacing: 8px; text-align: center; text-transform: uppercase; border: 2px solid #222; background: #151515; color: #fff; border-radius: 12px; outline: none; transition: 0.3s; }
+    .code-input:focus { border-color: #ff3366; }
+    .btn-primary { width: 100%; padding: 16px; background: linear-gradient(135deg, #ff3366, #ff6b9d); color: #fff; font-weight: bold; border: none; border-radius: 12px; font-size: 17px; cursor: pointer; margin-top: 16px; transition: 0.2s; }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .msg { color: #ff4444; font-size: 13px; margin-top: 12px; text-align: center; min-height: 18px; }
+
+    /* 答题页 */
+    .quiz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 13px; color: #888; }
+    .progress { height: 4px; background: #222; border-radius: 2px; overflow: hidden; margin-bottom: 32px; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #ff3366, #ff6b9d); width: 0%; transition: width 0.4s; }
+    .q-text { font-size: 19px; line-height: 1.6; font-weight: 600; margin-bottom: 28px; }
+    .opt { width: 100%; padding: 16px; background: #151515; border: 1.5px solid #222; color: #fff; border-radius: 12px; margin-bottom: 12px; text-align: left; cursor: pointer; font-size: 15px; line-height: 1.5; transition: 0.2s; }
+    .opt:hover { border-color: #ff3366; background: #1a1015; }
+    .opt:active { transform: scale(0.98); }
+
+    /* 结果海报 */
+    .poster { background: linear-gradient(145deg, #1a0f14, #0f0f0f); border: 1px solid #2a2a2a; border-radius: 20px; padding: 36px 24px; text-align: center; position: relative; overflow: hidden; }
+    .poster::before { content: ''; position: absolute; top: -60px; right: -60px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,51,102,0.15), transparent 70%); }
+    .poster-tag { font-size: 11px; color: #ff3366; letter-spacing: 3px; margin-bottom: 16px; }
+    .poster-name { font-size: 34px; font-weight: 800; margin: 8px 0; background: linear-gradient(135deg, #fff, #ff6b9d); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .poster-desc { color: #aaa; font-size: 16px; margin-bottom: 20px; }
+    .poster-detail { background: rgba(255,51,102,0.08); border-left: 3px solid #ff3366; padding: 16px; border-radius: 8px; text-align: left; font-size: 14px; line-height: 1.7; color: #ddd; margin-top: 16px; }
+    .poster-footer { margin-top: 24px; font-size: 11px; color: #555; letter-spacing: 1px; }
+    .save-tip { text-align: center; color: #666; font-size: 13px; margin: 20px 0; }
+    .btn-secondary { width: 100%; padding: 14px; background: #1a1a1a; color: #fff; border: 1px solid #333; border-radius: 12px; font-size: 15px; cursor: pointer; margin-top: 10px; }
+    .status-badge { display: inline-block; padding: 4px 12px; background: rgba(255,51,102,0.15); color: #ff6b9d; border-radius: 20px; font-size: 12px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 页面1：输入授权码 -->
+  <div id="page-input">
+    <div class="hero">
+      <h1>✨ K-pop 性格原型</h1>
+      <p>5 道情境题 · 测出你和哪位女团 Idol 灵魂最相似<br>测试完成后输入授权码查看完整报告</p>
+      <input type="text" id="codeInput" class="code-input" maxlength="6" placeholder="输入 6 位授权码" autocomplete="off">
+      <button class="btn-primary" id="checkBtn" onclick="checkCode()">开始测试</button>
+      <div class="msg" id="msg"></div>
+    </div>
+  </div>
+
+  <!-- 页面2：答题 -->
+  <div id="page-quiz" class="hidden">
+    <div class="quiz-header">
+      <span>题目 <span id="qNum">1</span> / 5</span>
+      <span id="remainHint" style="color:#ff6b9d;"></span>
+    </div>
+    <div class="progress"><div class="progress-fill" id="prog"></div></div>
+    <div class="q-text" id="qText"></div>
+    <div id="opts"></div>
+  </div>
+
+  <!-- 页面3：结果海报 -->
+  <div id="page-result" class="hidden">
+    <div class="poster" id="poster">
+      <div class="poster-tag">K-POP PERSONALITY ARCHIVE</div>
+      <div class="poster-name" id="rName">--</div>
+      <div class="poster-desc" id="rDesc">--</div>
+      <div class="poster-detail" id="rDetail">--</div>
+      <div class="poster-footer">本档案基于你的选择生成 · 仅供趣味探索</div>
+    </div>
+    <div class="save-tip">👆 长按上方卡片保存海报</div>
+    <div id="statusArea" style="text-align:center;"></div>
+    <button class="btn-secondary" onclick="location.reload()">返回首页</button>
+  </div>
+
+</div>
+
+<script>
+// ========== 5道测试题 ==========
+// 每道题的4个选项分别对应4种核心性格倾向
+// 分数格式 [C表现力, L理性度, D自律性, N照顾欲] 范围1-4
+const questions = [
+  {
+    q: "高压工作下连续熬夜，身体到达极限时，你会？",
+    opts: [
+      { t: "吞下止痛药，镜头前依然保持完美表情", s: [3, 3, 4, 3] },  // Irene型
+      { t: "后台大声抱怨累，上台瞬间像换了个人爆发", s: [4, 2, 2, 2] },  // Ningning型
+      { t: "担心队友状态，主动帮她们分担走位递水", s: [2, 2, 3, 4] },  // Wendy型
+      { t: "心里盘算结束后怎么狠狠休息，继续坚持", s: [3, 4, 4, 2] }   // Sakura型
+    ]
+  },
+  {
+    q: "团队对下一张专辑概念出现严重分歧，你通常？",
+    opts: [
+      { t: "列出利弊分析，用数据和案例说服大家", s: [3, 4, 3, 3] },  // Soyeon型
+      { t: "当和事佬，努力找让所有人都满意的方案", s: [2, 2, 3, 4] },  // Wendy型
+      { t: "提出最大胆颠覆的新想法，直接打破僵局", s: [4, 3, 2, 2] },  // Ningning型
+      { t: "支持队长最终决定，全力配合执行到位", s: [3, 3, 4, 3] }   // Irene型
+    ]
+  },
+  {
+    q: "突然获得一天完全没行程的假期，你会？",
+    opts: [
+      { t: "去练习室加练，保持状态不能松懈", s: [2, 3, 4, 2] },  // Sakura型
+      { t: "宅宿舍点外卖追剧，享受绝对个人空间", s: [1, 2, 1, 2] },  // Jennie型
+      { t: "约朋友逛街探店，把行程排得满满", s: [4, 2, 1, 3] },  // Ningning型
+      { t: "整理房间做规划，或学习一项新技能", s: [2, 4, 4, 2] }   // Soyeon型
+    ]
+  },
+  {
+    q: "面对网络上的恶意评论和不实传闻，你会？",
+    opts: [
+      { t: "感到难过，向信任的队友家人倾诉寻求安慰", s: [2, 1, 2, 4] },  // Wendy型
+      { t: "完全不在意，用更好的舞台成绩反击", s: [4, 4, 4, 2] },  // Soyeon型
+      { t: "理性分析来源，必要时交由法务处理", s: [3, 4, 3, 2] },  // Irene型
+      { t: "用幽默自嘲的方式在社媒化解，展现大度", s: [4, 3, 2, 3] }   // Jennie型
+    ]
+  },
+  {
+    q: "用一句话总结你理想的偶像生涯，希望是？",
+    opts: [
+      { t: "燃烧自己照亮别人，成为团队的光", s: [4, 2, 3, 4] },  // Wendy型
+      { t: "打破规则定义新标准，留下传奇作品", s: [4, 4, 4, 2] },  // Soyeon型
+      { t: "享受舞台找到真实的自己，快乐最重要", s: [3, 2, 2, 3] },  // Jennie型
+      { t: "做到极致不留遗憾，每一步都扎实", s: [3, 4, 4, 3] }   // Sakura型
+    ]
+  }
+];
+
+// ========== 6种 Idol 原型 ==========
+// 标准分向量 [C, L, D, N]，与题目选项强关联
+const idols = [
+  {
+    name: 'Irene 型',
+    fullName: 'Irene (裴珠泫)',
+    desc: '完美主义的清冷队长',
+    detail: '你外表看似高冷难以接近，实则是团队最坚实的后盾。对细节有近乎苛刻的要求，追求极致完美。内心柔软，总是默默照顾所有人，是让人安心的定海神针。',
+    scores: [3, 3, 4, 3]
+  },
+  {
+    name: 'Soyeon 型',
+    fullName: 'Soyeon (田小娟)',
+    desc: '掌控全场的天才制作人',
+    detail: '你拥有极强的目标感和领导力，不随波逐流。敢于打破规则，用绝对的实力和自信掌控人生舞台。理性果断，是团队的核心大脑。',
+    scores: [4, 4, 3, 2]
+  },
+  {
+    name: 'Ningning 型',
+    fullName: 'Ningning (宁艺卓)',
+    desc: '真实不做作的综艺天才',
+    detail: '你是团队的人间维他命！直觉系行动派，不内耗不伪装，敢于展现最真实的一面。外放耀眼，你的存在本身就能给周围带来欢乐和能量。',
+    scores: [4, 2, 2, 2]
+  },
+  {
+    name: 'Wendy 型',
+    fullName: 'Wendy',
+    desc: '温暖包容的团队太阳',
+    detail: '你拥有极强的共情能力，是朋友眼中的倾听者。温柔善良，总是优先考虑他人感受。你的声音和存在就能治愈人心，是团队的情感纽带。',
+    scores: [2, 2, 3, 4]
+  },
+  {
+    name: 'Jennie 型',
+    fullName: 'Jennie',
+    desc: '慵懒随性的时尚 Icon',
+    detail: '你懂得在努力与松弛之间找到完美平衡。平时看似漫不经心，关键时刻却能爆发出惊人实力。真实不做作，拥有独特的个人魅力和松弛感。',
+    scores: [3, 2, 2, 3]
+  },
+  {
+    name: 'Sakura 型',
+    fullName: 'Sakura (宫胁咲良)',
+    desc: '极致努力的野心家',
+    detail: '你目标明确，拥有燃烧自己也要达成目标的坚韧。不相信天赋只相信汗水，每一步都走得无比扎实。自律到极致，是让人敬佩的奋斗者。',
+    scores: [3, 4, 4, 3]
+  }
+];
+
+// ========== 逻辑控制 ==========
+let currentCode = '';
+let currentQ = 0;
+let userScores = [0, 0, 0, 0]; // [C, L, D, N]
+let maxAttempts = 0;
+
+function show(id) {
+  document.querySelectorAll('.wrap > div').forEach(d => d.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+function showMsg(text, color = '#ff4444') {
+  const el = document.getElementById('msg');
+  el.innerText = text;
+  el.style.color = color;
+}
+
+// 1. 验证授权码
+async function checkCode() {
+  const code = document.getElementById('codeInput').value.trim().toUpperCase();
+  if (code.length !== 6) return showMsg('请输入完整的 6 位授权码');
+
+  const btn = document.getElementById('checkBtn');
+  btn.disabled = true;
+  btn.innerText = '验证中...';
+  showMsg('');
+
+  try {
+    const res = await fetch('/api/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code })
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      showMsg(data.error);
+      btn.disabled = false;
+      btn.innerText = '开始测试';
+      return;
+    }
+
+    currentCode = code;
+    maxAttempts = data.remaining + (data.has_result ? 1 : 0); // 推算总次数
+
+    if (data.remaining > 0) {
+      // 还有测试次数 → 进入答题
+      document.getElementById('remainHint').innerText = `剩余 ${data.remaining} 次测试机会`;
+      startQuiz();
+    } else if (data.has_result) {
+      // 次数用完 → 直接看最后一次结果
+      showResult(data.result, 0);
+    }
+  } catch (e) {
+    showMsg('网络错误，请检查连接');
+    btn.disabled = false;
+    btn.innerText = '开始测试';
+  }
+}
+
+// 2. 开始答题
+function startQuiz() {
+  currentQ = 0;
+  userScores = [0, 0, 0, 0];
+  show('page-quiz');
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = questions[currentQ];
+  document.getElementById('qNum').innerText = currentQ + 1;
+  document.getElementById('qText').innerText = q.q;
+  document.getElementById('prog').style.width = `${(currentQ / questions.length) * 100}%`;
+
+  const container = document.getElementById('opts');
+  container.innerHTML = '';
+  q.opts.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'opt';
+    btn.innerText = opt.t;
+    btn.onclick = () => selectOption(opt.s);
+    container.appendChild(btn);
+  });
+}
+
+function selectOption(scores) {
+  for (let i = 0; i < 4; i++) userScores[i] += scores[i];
+  currentQ++;
+  if (currentQ < questions.length) {
+    renderQuestion();
+  } else {
+    submitResult();
+  }
+}
+
+// 3. 计算并保存结果
+async function submitResult() {
+  // 欧氏距离匹配最相似的原型
+  let bestMatch = idols[0];
+  let minDiff = Infinity;
+
+  idols.forEach(idol => {
+    let diff = 0;
+    for (let i = 0; i < 4; i++) {
+      diff += Math.pow(userScores[i] - idol.scores[i], 2);
+    }
+    if (diff < minDiff) {
+      minDiff = diff;
+      bestMatch = idol;
+    }
+  });
+
+  const resultData = {
+    name: bestMatch.fullName,
+    type: bestMatch.name,
+    desc: bestMatch.desc,
+    detail: bestMatch.detail,
+    scores: userScores,
+    matched_at: new Date().toISOString()
+  };
+
+  try {
+    const res = await fetch('/api/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: currentCode, resultData })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      showResult(resultData, data.remaining);
+    } else {
+      alert('保存失败：' + data.error);
+      location.reload();
+    }
+  } catch (e) {
+    alert('网络错误');
+    location.reload();
+  }
+}
+
+// 4. 显示结果
+function showResult(result, remaining) {
+  document.getElementById('rName').innerText = result.name;
+  document.getElementById('rDesc').innerText = result.desc;
+  document.getElementById('rDetail').innerText = result.detail;
+
+  const statusArea = document.getElementById('statusArea');
+  if (remaining > 0) {
+    statusArea.innerHTML = `
+      <div class="status-badge">剩余 ${remaining} 次测试机会</div>
+      <button class="btn-secondary" onclick="location.reload()" style="margin-top:16px;">重新测试（将覆盖本次结果）</button>
+    `;
+  } else {
+    statusArea.innerHTML = `
+      <div class="status-badge">测试次数已用完 · 最终档案</div>
+    `;
+  }
+
+  show('page-result');
+}
+
+// 输入框自动大写
+document.getElementById('codeInput').addEventListener('input', function(e) {
+  e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+});
+
+// 回车提交
+document.getElementById('codeInput').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') checkCode();
+});
+</script>
+</body>
+</html>
